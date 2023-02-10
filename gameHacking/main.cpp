@@ -48,7 +48,6 @@ uintptr_t getProcessId( const wchar_t* processName )
 
 	do
 	{
-
 		if ( !_wcsicmp( pe32.szExeFile , processName ) )
 		{
 			CloseHandle( hProcessSnapShot );
@@ -56,6 +55,11 @@ uintptr_t getProcessId( const wchar_t* processName )
 		}
 
 	} while ( Process32Next( hProcessSnapShot , &pe32 ) );
+
+	//Clearly dumbass do-while loop did not find, prolly an incorrect process name 
+	std::cout << "Could not find process: ";
+	std::wcout << processName;
+	std::cout << ". Make sure process name is correct dumbass!" << std::endl;
 
 	CloseHandle( hProcessSnapShot );
 	return ( FALSE );
@@ -68,7 +72,6 @@ uintptr_t getModuleBaseAddress( const DWORD processID , const wchar_t* moduleNam
 
 	//gets snapshot of all modules depending on the bit of the process. 64-bit process can get 32-bit module using TH32CS_SNAPMODULE32
 	hModuleSnapShot = CreateToolhelp32Snapshot( TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32 , processID );
-
 
 	//invalid handle thingy is returned when snapshot has failed, as stated in the MS docs
 	if ( hModuleSnapShot == INVALID_HANDLE_VALUE )
@@ -105,14 +108,27 @@ uintptr_t getModuleBaseAddress( const DWORD processID , const wchar_t* moduleNam
 	std::cout << "Could not find module: ";
 	std::wcout << moduleName;
 	std::cout << ". Make sure module name is correct dumbass!" << std::endl;
+
 	CloseHandle( hModuleSnapShot );
 	return( FALSE ); 
 }
 
+uintptr_t getPointerChain( HANDLE hProcess , uintptr_t ptr , std::vector<unsigned int> offsets )
+{
+	uintptr_t addr = ptr;
+	for ( const unsigned int& offset : offsets )
+	{
+		ReadProcessMemory( hProcess , (BYTE*)addr  , &addr , sizeof( addr ) , NULL );
+		addr += offset;
+	}
+	return addr;
+}
+
 int main()
 {
-	//Gets the module base address of ac_client.exe of process ID 36812
-	uintptr_t moduleBaseAddress = getModuleBaseAddress( DWORD( 36812 ) , L"ac_clent.exe" );
+	uintptr_t processID = getProcessId( L"ac_client.exe" );
+	//Gets the module base address of ac_client.exe of process ID
+	uintptr_t moduleBaseAddress = getModuleBaseAddress( processID, L"ac_client.exe" );
 
 	return 0;
 }

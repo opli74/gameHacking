@@ -15,5 +15,5 @@ uintptr_t getProcessId( const wchar_t* processName );
 //gets the module base address of a specified module and processID
 uintptr_t getModuleBaseAddress( const DWORD processID , const wchar_t* moduleName );
 
-//returns the base ptr of a ptr chain
+//returns the end variable of a ptr chain
 uintptr_t getPointerChain( HANDLE hProcess , uintptr_t ptr , std::vector<unsigned int> offsets );
