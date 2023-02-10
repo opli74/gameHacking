@@ -65,7 +65,7 @@ uintptr_t getProcessId( const wchar_t* processName )
 	return ( FALSE );
 }
 
-uintptr_t getModuleBaseAddress( const DWORD processID , const wchar_t* moduleName )
+uintptr_t getModuleBaseAddress( const uintptr_t processID , const wchar_t* moduleName )
 {
 	HANDLE hModuleSnapShot = INVALID_HANDLE_VALUE;
 	MODULEENTRY32 me32;
@@ -99,7 +99,7 @@ uintptr_t getModuleBaseAddress( const DWORD processID , const wchar_t* moduleNam
 		if ( !_wcsicmp( me32.szModule , moduleName ) )
 		{
 			CloseHandle( hModuleSnapShot );
-			return uintptr_t( me32.th32ModuleID );
+			return uintptr_t( me32.modBaseAddr );
 		}
 
 	} while ( Module32Next( hModuleSnapShot , &me32 ) );
@@ -118,17 +118,41 @@ uintptr_t getPointerChain( HANDLE hProcess , uintptr_t ptr , std::vector<unsigne
 	uintptr_t addr = ptr;
 	for ( const unsigned int& offset : offsets )
 	{
-		ReadProcessMemory( hProcess , (BYTE*)addr  , &addr , sizeof( addr ) , NULL );
+		ReadProcessMemory( hProcess , (BYTE*)addr  , &addr , sizeof( addr ) , nullptr );
 		addr += offset;
 	}
 	return addr;
 }
+
+uintptr_t internal::getPointerChain(uintptr_t ptr , std::vector<unsigned int> offsets )
+{
+	uintptr_t addr = ptr;
+	for ( const unsigned int& offset : offsets )
+	{
+		addr = *(uintptr_t*)addr;
+		addr += offset;
+	}
+	return addr;
+}
+
 
 int main()
 {
 	uintptr_t processID = getProcessId( L"ac_client.exe" );
 	//Gets the module base address of ac_client.exe of process ID
 	uintptr_t moduleBaseAddress = getModuleBaseAddress( processID, L"ac_client.exe" );
+
+	std::cout << moduleBaseAddress << std::endl;
+
+	uintptr_t playerBaseAddr = moduleBaseAddress + 0x10f4f4;
+
+	HANDLE hProcess = OpenProcess( PROCESS_ALL_ACCESS , NULL , processID );
+
+	uintptr_t ammoAddr = getPointerChain( hProcess , playerBaseAddr , { 0x374, 0x14, 0x0 } );
+
+	int newAmmo = 999;
+
+	WriteProcessMemory( hProcess , (BYTE*)ammoAddr , &newAmmo , sizeof( newAmmo ) , nullptr );
 
 	return 0;
 }
