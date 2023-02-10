@@ -23,6 +23,44 @@ void printError(const TCHAR* msg)
 	_tprintf(TEXT("\n  WARNING: %s failed with error %d (%s)"), msg, eNum, sysMsg);
 }
 
+uintptr_t getProcessId( const wchar_t* processName )
+{
+	HANDLE hProcessSnapShot = INVALID_HANDLE_VALUE;
+	PROCESSENTRY32 pe32;
+
+	hProcessSnapShot = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS , NULL );
+
+	if ( hProcessSnapShot == INVALID_HANDLE_VALUE )
+	{
+		printError( TEXT( "CreateToolhelp32Snapshot (of processes)" ) );
+		return( FALSE );
+	}
+
+	//set size of processentry structure
+	pe32.dwSize = sizeof( PROCESSENTRY32 );
+
+	if ( !Process32First( hProcessSnapShot , &pe32 ) )
+	{
+		printError( TEXT( "Process32First" ) );
+		CloseHandle( hProcessSnapShot );
+		return( FALSE );
+	}
+
+	do
+	{
+
+		if ( !_wcsicmp( pe32.szExeFile , processName ) )
+		{
+			CloseHandle( hProcessSnapShot );
+			return pe32.th32ProcessID;
+		}
+
+	} while ( Process32Next( hProcessSnapShot , &pe32 ) );
+
+	CloseHandle( hProcessSnapShot );
+	return ( FALSE );
+}
+
 uintptr_t getModuleBaseAddress( const DWORD processID , const wchar_t* moduleName )
 {
 	HANDLE hModuleSnapShot = INVALID_HANDLE_VALUE;
